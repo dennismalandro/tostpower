@@ -1,4 +1,3 @@
-# Some useful keyboard shortcuts for package authoring:
 #' TOST power and sample size calculations.
 #'
 #' Calculate the power to detect equivalence or non-inferiority for either
@@ -16,7 +15,7 @@
 #' @param paired Is this for paired comparisons?
 #' @param type Is this designed to show equivalence or simply non-inferiority?
 #'
-#' @return Power to detect equivalence
+#' @return Power to detect equivalence/non-inferiority
 #'
 #' @author Dennis L. Malandro, \email{dennismalandro@@gmail.com}
 #'
@@ -38,51 +37,35 @@
 #' @keywords hypothesis-test power sample-size
 #'
 #' @export
-tost_power <- function(n, true_dif = 0, threshold = 0.2, sd = 0.2,
-  sig_level = 0.05, paired = FALSE, type = c('equivalence', 'non_inferiority')) {
+tost_power <- function(n, true_dif = 0, threshold = 0.2,
+  sd = 0.2, sig_level = 0.05, paired = FALSE,
+  type = c('equivalence', 'non_inferiority')) {
 
   type <- match.arg(type)
 
-  m <- 2 - paired # 1 for paired, 2 for !paired
-
-  # for paired, n and se correspond to *differences*
-  # for !paired, n is number in *each* group, 2n is total ss
-  std_error <- sd * sqrt(m / n) # weird way to do it
+  m <- 2 - paired  # m = 1 for paired data, 2 for unpaired
+  std_error <- sd * sqrt(m / n)
   nu <- (n - 1) * m
+  # for non-paired data, n is number in *each* group
 
   qu <- qt(sig_level, nu, lower.tail = FALSE)
 
-  if(length(threshold) == 1) threshold <- c(-abs(threshold), abs(threshold))
+  if(length(threshold) == 1)
+    threshold <- abs(threshold) * c(-1, 1)
+
   ncp <- (true_dif - threshold) / std_error
 
   if (type == 'equivalence') {
-#    pmvt(lower = c(qu, -Inf), upper = c(Inf, -qu), df = floor(nu), delta = ncp)
-    p <- pmvt(lower = c(qu, -Inf), upper = c(Inf, -qu), df = nu, delta = ncp)
+    p <- mvtnorm::pmvt(
+      lower = c(qu, -Inf),
+      upper = c(Inf, -qu),
+      df = nu,
+      delta = ncp  # ncp is a length-two vector
+    )
     attributes(p) <- NULL
-  } else {
+  } else {# univariate t-dist for non-inferiority
     p <- pt(qu, df = nu, ncp = ncp[1], lower.tail = FALSE)
   }
-#   list(power = p, n = n, true_dif = true_dif,
-#     threshold = paste0('(', threshold[1], ', ', threshold[2], ')'), sd = sd,
-#     sig_level = sig_level, paired = paired, type = type)
   p
 
 }
-
-#' @export
-#'
-#' @rdname tost_power
-#'
-tost_ss <- function(power = 0.8, true_dif = 0, threshold = 0.2, sd = 0.2,
-  sig_level = 0.05, paired = FALSE, type = c('equivalence', 'non_inferiority')) {
-
-  type <- match.arg(type)
-  if(length(threshold) == 1) threshold <- c(-abs(threshold), abs(threshold))
-
-  u <- uniroot(
-    function(n) tost_power(n, true_dif = true_dif, threshold = threshold,
-      sd = sd, sig_level = sig_level, paired = paired, type = type) - power,
-    c(2, 999), extendInt = 'no')
-  ceiling(u$root)
-}
-
