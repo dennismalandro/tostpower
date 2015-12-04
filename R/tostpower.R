@@ -32,8 +32,6 @@
 #' @examples
 #' tost_power(9)
 #'
-#' tost_ss(paired = TRUE, type = 'non_inferiority')
-#'
 #' @keywords hypothesis-test power sample-size
 #'
 #' @export
@@ -67,5 +65,4 @@ tost_power <- function(n, true_dif = 0, threshold = 0.2,
     p <- pt(qu, df = nu, ncp = ncp[1], lower.tail = FALSE)
   }
   p
-
 }
