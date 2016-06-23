@@ -1,13 +1,13 @@
 Package: tostpower
 Type: Package
-Title: Power Calculator for Equivalence and Non-inferiority Hypothesis Tests
-Version: 0.1.1
-Date: 2015-12-03
+Title: TOST Equivalence/Noninferiority Power Calculation
+Version: 0.1.3
+Date: 2016-06-22
 Authors@R: person("Dennis", "Malandro",
   email = "dennismalandro@gmail.com", role = c("aut", "cre"))
-Description: Power calculations for TOST type hypothesis testing.
+Description: Power calculations for TOST equivalence tests.
     It includes both "equivalence" and "non-inferiority" alternatives,
-    for both paired and unpaired observations.
+    and both paired and unpaired comparisons.
 License: GPL
 LazyData: TRUE
 Imports:

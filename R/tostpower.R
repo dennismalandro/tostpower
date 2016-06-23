@@ -3,19 +3,17 @@
 #' Calculate the power to detect equivalence or non-inferiority for either
 #' paired or unpaired experiments.
 #'
-#' @param n The sample size: for \code{paired == TRUE}, the number differences;
-#' for \code{paired == FALSE} (the default), the number in each group.
-#' @param power The power to detect equivalence (or non-inferiority).
-#' @param true_dif The true (ie, unknown) difference in population mean (as a
-#'  proportion of the reference mean).
-#' @param threshold The maximum difference between the two means that can be
+#' @param n The number in each group for \code{!paired} (the default);
+#'  the number of pairs for \code{paired}
+#' @param sigma The standard devation: total for \code{!paired}, within for \code{paired}.
+#' @param true_diff The true (unknown) difference of population means.
+#' @param eqv_interval The interval within which \code{true_diff} is _equivalant_
 #'  considered equivalent (as a proportion of the reference mean).
-#' @param sd The standard devation (as a proportion of the reference mean).
-#' @param sig_level The significance (i.e. alpha) level of the test.
-#' @param paired Is this for paired comparisons?
-#' @param type Is this designed to show equivalence or simply non-inferiority?
+#' @param alpha The significance level of the test.
+#' @param paired Is this a paired comparison?
+#' @param df Degress of freedom, (usually not set independent of \code{n}, but can be, see details).
 #'
-#' @return Power to detect equivalence/non-inferiority
+#' @return Power for both equivalence and non-inferiority alternatives
 #'
 #' @author Dennis L. Malandro, \email{dennismalandro@@gmail.com}
 #'
@@ -30,39 +28,56 @@
 #' @seealso \code{\link{power.t.test}}
 #'
 #' @examples
-#' tost_power(9)
+#' # Reproduce of n=9 part of power curve in Phillips, Fig. 1 on p. 139
+#'
+#' delta_mu <- c(0, 5, 10, 15)
+#'
+#' sapply(delta_mu, function(x) {
+#'   tost_power(true_diff = x,
+#'     n = 9, sigma = 10,
+#'     eqv_interval = c(-20, 20), df = 7)[['eq']]
+#'   }
+#' )
 #'
 #' @keywords hypothesis-test power sample-size
 #'
 #' @export
-tost_power <- function(n, true_dif = 0, threshold = 0.2,
-  sd = 0.2, sig_level = 0.05, paired = FALSE,
-  type = c('equivalence', 'non_inferiority')) {
+tost_power <- function(
+  n = 10, sigma = 1,
+  true_diff = 0,
+  eqv_interval = c(-1, 1),
+  alpha = 0.05,
+  paired = FALSE,
+  df = NULL) {
 
-  type <- match.arg(type)
+  # set df ind of n if needed cuzza other params (eg x-over)
+  if(is.null(df)) df <- ifelse(paired, n - 1, 2 * n - 2)
 
-  m <- 2 - paired  # m = 1 for paired data, 2 for unpaired
-  std_error <- sd * sqrt(m / n)
-  nu <- (n - 1) * m
-  # for non-paired data, n is number in *each* group
 
-  qu <- qt(sig_level, nu, lower.tail = FALSE)
+  # rejection region under H0: univariate central t twice
+  rej_region <- qt(c(1 - alpha, alpha), df = df)
 
-  if(length(threshold) == 1)
-    threshold <- abs(threshold) * c(-1, 1)
 
-  ncp <- (true_dif - threshold) / std_error
+  # bivariate noncentrality parameter
+  ncp <- (true_diff - eqv_interval) / sigma * sqrt(n / 2)
 
-  if (type == 'equivalence') {
-    p <- mvtnorm::pmvt(
-      lower = c(qu, -Inf),
-      upper = c(Inf, -qu),
-      df = nu,
-      delta = ncp  # ncp is a length-two vector
-    )
-    attributes(p) <- NULL
-  } else {# univariate t-dist for non-inferiority
-    p <- pt(qu, df = nu, ncp = ncp[1], lower.tail = FALSE)
-  }
-  p
-}
+
+  if(true_diff < eqv_interval[1]) {
+    stop("mean difference can't be below equivalence region")
+
+  } else {
+
+    # equivalence alternative is bivariate noncentral t
+    eqv_power <- mvtnorm::pmvt(
+      lower = c(rej_region[1], -Inf),
+      upper = c(Inf, rej_region[2]),
+      df = df,
+      delta = ncp,
+      algorithm = mvtnorm::GenzBretz(abseps = 0.00001))
+    attributes(eqv_power) <- NULL
+
+    # noninf alt is univariate noncentral
+    noninf_power <- pt(rej_region[1], df, ncp = ncp[1], lower = F)}
+
+  # power for both equivalence and noninferiority alternatives
+  c(eq = eqv_power, noninf = noninf_power)}

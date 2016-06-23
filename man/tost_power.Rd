@@ -4,38 +4,44 @@
 \alias{tost_power}
 \title{TOST power and sample size calculations.}
 \usage{
-tost_power(n, true_dif = 0, threshold = 0.2, sd = 0.2, sig_level = 0.05,
-  paired = FALSE, type = c("equivalence", "non_inferiority"))
+tost_power(n = 10, sigma = 1, true_diff = 0, eqv_interval = c(-1, 1),
+  alpha = 0.05, paired = FALSE, df = NULL)
 }
 \arguments{
-\item{n}{The sample size: for \code{paired == TRUE}, the number differences;
-for \code{paired == FALSE} (the default), the number in each group.}
+\item{n}{The number in each group for \code{!paired} (the default);
+the number of pairs for \code{paired}}
 
-\item{true_dif}{The true (ie, unknown) difference in population mean (as a
-proportion of the reference mean).}
+\item{sigma}{The standard devation: total for \code{!paired}, within for \code{paired}.}
 
-\item{threshold}{The maximum difference between the two means that can be
+\item{true_diff}{The true (unknown) difference of population means.}
+
+\item{eqv_interval}{The interval within which \code{true_diff} is _equivalant_
 considered equivalent (as a proportion of the reference mean).}
 
-\item{sd}{The standard devation (as a proportion of the reference mean).}
+\item{alpha}{The significance level of the test.}
 
-\item{sig_level}{The significance (i.e. alpha) level of the test.}
+\item{paired}{Is this a paired comparison?}
 
-\item{paired}{Is this for paired comparisons?}
-
-\item{type}{Is this designed to show equivalence or simply non-inferiority?}
-
-\item{power}{The power to detect equivalence (or non-inferiority).}
+\item{df}{Degress of freedom, (usually not set independent of \code{n}, but can be, see details).}
 }
 \value{
-Power to detect equivalence/non-inferiority
+Power for both equivalence and non-inferiority alternatives
 }
 \description{
 Calculate the power to detect equivalence or non-inferiority for either
 paired or unpaired experiments.
 }
 \examples{
-tost_power(9)
+# Reproduce of n=9 part of power curve in Phillips, Fig. 1 on p. 139
+
+delta_mu <- 0:20
+
+sapply(delta_mu, function(x) {
+  tost_power(true_diff = x,
+    n = 9, sigma = 10,
+    eqv_interval = c(-20, 20), df = 7)[['eq']]
+  }
+)
 
 }
 \author{
